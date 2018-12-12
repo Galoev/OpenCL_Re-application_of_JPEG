@@ -188,16 +188,16 @@ int super_mega_opencl()
   for (int i = 0; i<DCTSIZE; i++)
     for (int j = 0; j<DCTSIZE; j++)
     {
-      scaleMatQuant[i*DCTSIZE+j] = 1.0/(aanscalefactor[i]*aanscalefactor[j]*8.0* quant[i*DCTSIZE+j]);
-      //scaleMatQuant[i*DCTSIZE+j] = 1.0/(aanscalefactor[i]*aanscalefactor[j]*8.0* img.getElemQuantTbl(i*DCTSIZE+j));
+      //scaleMatQuant[i*DCTSIZE+j] = 1.0/(aanscalefactor[i]*aanscalefactor[j]*8.0* quant[i*DCTSIZE+j]);
+      scaleMatQuant[i*DCTSIZE+j] = 1.0/(aanscalefactor[i]*aanscalefactor[j]*8.0* img.getElemQuantTbl(i*DCTSIZE+j));
     }
   
   float  dctTable[DCTSIZE2];
   for (int i = 0; i<DCTSIZE; i++)
     for (int j = 0; j<DCTSIZE; j++)
     {
-      dctTable[i*DCTSIZE+j] = (aanscalefactor[i]*aanscalefactor[j]*0.125 * quant[i*DCTSIZE+j]);
-      //dctTable[i*DCTSIZE+j] = (aanscalefactor[i]*aanscalefactor[j]*0.125 * img.getElemQuantTbl(i*DCTSIZE+j));
+      //dctTable[i*DCTSIZE+j] = (aanscalefactor[i]*aanscalefactor[j]*0.125 * quant[i*DCTSIZE+j]);
+      dctTable[i*DCTSIZE+j] = (aanscalefactor[i]*aanscalefactor[j]*0.125 * img.getElemQuantTbl(i*DCTSIZE+j));
     }
   
   cl_mem buff_rawImg = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uchar)*rows*cols, nullptr, nullptr);
