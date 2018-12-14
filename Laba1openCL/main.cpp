@@ -290,13 +290,13 @@ int super_mega_opencl()
   
   unsigned char *resImg = new unsigned char[rows * cols];
   
-  clEnqueueReadBuffer(command_queue, buff_resImg, true, 0, sizeof(cl_uchar)*rows*cols, resImg, 0, nullptr, nullptr);
+  clEnqueueReadBuffer(command_queue, buff_resDCT, true, 0, sizeof(cl_short)*rows*cols, matDCT, 0, nullptr, nullptr);
   /*
    for (int i = 0; i<rows*cols; i++){
    matDCT[i] /= 64.0;
    }*/
   
-  img.writePGMimage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/JPEG_example_JPG_RIP_010_gray_OPENCL.pgm", resImg);
+  img.writePGMimage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/JPEG_example_JPG_RIP_010_gray_OPENCL.pgm", matDCT);
   /*
    cout<<"C: "<<endl;
    for (int i = 0; i<SIZE_X; i++)

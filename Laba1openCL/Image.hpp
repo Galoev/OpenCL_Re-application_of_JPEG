@@ -15,7 +15,7 @@ extern "C"{
 class Image {
 public:
   int readImage(const char *filename);
-  void writePGMimage(const char *filename, unsigned char *matDCT);
+  void writePGMimage(const char *filename, short *matDCT);
   unsigned int getRows();
   unsigned int getCols();
   unsigned char* getRawImg();

@@ -4,6 +4,8 @@
 #define DCTSIZE2 64
 #define CENTERJSAMPLE  128
 #define LOCAL_WINDOW_SIZE 16
+#define MAXJSAMPLE  255
+#define RANGE_MASK  (MAXJSAMPLE * 4 + 3)
 
 
 
@@ -133,7 +135,7 @@ void my_stride_jpeg_fdct_float (float * data, local float* sample_data, const un
 }
 
 
-void my_jpeg_idct_float (float *quantptr, short *coef_block, float *output_buf)
+void my_jpeg_idct_float (unsigned char* range_limit, float *quantptr, short *coef_block, float *output_buf)
 {
   float tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
   float tmp10, tmp11, tmp12, tmp13;
@@ -284,14 +286,14 @@ void my_jpeg_idct_float (float *quantptr, short *coef_block, float *output_buf)
     
     /* Final output stage: float->int conversion and range-limit */
     
-    outptr[0] = tmp0 + tmp7;
-    outptr[7] = tmp0 - tmp7;
-    outptr[1] = tmp1 + tmp6;
-    outptr[6] = tmp1 - tmp6;
-    outptr[2] = tmp2 + tmp5;
-    outptr[5] = tmp2 - tmp5;
-    outptr[3] = tmp3 + tmp4;
-    outptr[4] = tmp3 - tmp4;
+    outptr[0] = range_limit[((int) (tmp0 + tmp7)) & RANGE_MASK];
+    outptr[7] = range_limit[((int) (tmp0 - tmp7)) & RANGE_MASK];
+    outptr[1] = range_limit[((int) (tmp1 + tmp6)) & RANGE_MASK];
+    outptr[6] = range_limit[((int) (tmp1 - tmp6)) & RANGE_MASK];
+    outptr[2] = range_limit[((int) (tmp2 + tmp5)) & RANGE_MASK];
+    outptr[5] = range_limit[((int) (tmp2 - tmp5)) & RANGE_MASK];
+    outptr[3] = range_limit[((int) (tmp3 + tmp4)) & RANGE_MASK];
+    outptr[4] = range_limit[((int) (tmp3 - tmp4)) & RANGE_MASK];
     
     wsptr += DCTSIZE;    /* advance pointer to next row */
   }
@@ -309,7 +311,7 @@ void strideFloatDCT(local float *sample_data, const unsigned int stride, float *
       //shortData[i * 8 + j] = data[i * 8 + j] *(1/ (8 * aanscalefactor[i] * aanscalefactor[j] * cinfo.quant_tbl_ptrs[0]->quantval[i*DCTSIZE+j]/* * quantMatrix */));
       //shortData[i * 8 + j] = data[i * 8 + j] *(1/ (8 * aanscalefactor[i] * aanscalefactor[j] ));
       //shortData[i * 8 + j] = data[i * 8 + j] *scaleMatQuant[i * 8 + j]* cinfo.quant_tbl_ptrs[0]->quantval[i*DCTSIZE+j];
-      shortData[i * 8 + j] = data[i * 8 + j] * scaleMatQuant[i * 8 + j];
+      shortData[i * 8 + j] = round(data[i * 8 + j] * scaleMatQuant[i * 8 + j]);
     }
   }
   float dctTable[DCTSIZE2];
@@ -321,7 +323,17 @@ void strideFloatDCT(local float *sample_data, const unsigned int stride, float *
       dctTable[i*DCTSIZE+j] = scaleMatDequant[i*DCTSIZE+j];
     }
   }
-  my_jpeg_idct_float(dctTable, shortData, data);
+  unsigned char range_limit[1024];
+  for (int i = 512; i<768; i++){
+    range_limit[i] = i-512;
+  }
+  for (int i = 0; i<512; i++){
+    range_limit[i] = 0;
+  }
+  for (int i = 768; i<1024; i++){
+    range_limit[i] = 255;
+  }
+  my_jpeg_idct_float(&range_limit[512], dctTable, shortData, data);
 }
 
 
@@ -460,6 +472,6 @@ kernel void divMat(short global *resDCT, uchar global *resImg, const uint rows, 
   
   
   //resDCT[y*cols+x] = convert_uchar_sat(tmp/64);
-  *(global short8*)&resImg[y*cols+x*DCTSIZE] = tmp;
+  *(global short8*)&resDCT[y*cols+x*DCTSIZE] = tmp;
 }
 
