@@ -123,18 +123,18 @@ unsigned int Image::getElemQuantTbl(const unsigned int num)
   return cinfo.quant_tbl_ptrs[0]->quantval[num];
 }
 
-void Image::writePGMimage(const char *filename, short *matDCT){
+void Image::writePGMimage(const char *filename, unsigned char *matDCT){
   FILE *file = fopen(filename, "wb");
   //cout<<"Width: "<<cinfo.image_width<<" Heigh: "<<cinfo.image_height<<endl;
   fprintf(file, "P5\n%i %i\n255\n", cinfo.image_width, cinfo.image_height);
-  //fwrite(matDCT, sizeof(unsigned char), getRows() * getCols(), file);
-  
+  fwrite(matDCT, sizeof(unsigned char), getRows() * getCols(), file);
+  /*
   for (int i = 0; i<cinfo.image_height; i++){
     for (int j = 0; j<cinfo.image_width; j++){
       fwrite(&matDCT[i*cinfo.image_width+j], 1, 1, file);
     }
     
-  }
+  }*/
   fclose(file);
 }
 

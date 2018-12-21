@@ -1,11 +1,12 @@
-#define GETJSAMPLE(value)  ((int) (value))
-#define DEQUANTIZE(coef,quantval)  (((float) (coef)) * (quantval))
+#define GETJSAMPLE(value)  (value)
+#define DEQUANTIZE(coef,quantval)  ((coef) * (quantval))
 #define DCTSIZE 8
 #define DCTSIZE2 64
 #define CENTERJSAMPLE  128
 #define LOCAL_WINDOW_SIZE 16
 #define MAXJSAMPLE  255
 #define RANGE_MASK  (MAXJSAMPLE * 4 + 3)
+#define RANGE_LIMIT(x) (x)
 
 
 
@@ -24,26 +25,27 @@ void my_stride_jpeg_fdct_float (float * data, local float* sample_data, const un
   float tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
   float tmp10, tmp11, tmp12, tmp13;
   float z1, z2, z3, z4, z5, z11, z13;
-  float *dataptr;
-  local float* elemptr;
-  int ctr;
+  
+  
+  
   
   /* Pass 1: process rows. */
   
-  dataptr = data;
-  for (ctr = 0; ctr < DCTSIZE; ctr++) {
+  
+  for (int ctr = 0; ctr < DCTSIZE; ctr++) {
     //elemptr = sample_data[ctr] + start_col;
-    elemptr = &sample_data[ctr*stride];
+    float *dataptr = &data[ctr*DCTSIZE];
+    local float* elemptr = &sample_data[ctr*stride];
     
     /* Load data into workspace */
-    tmp0 = (float) (GETJSAMPLE(elemptr[0]) + GETJSAMPLE(elemptr[7]));
-    tmp7 = (float) (GETJSAMPLE(elemptr[0]) - GETJSAMPLE(elemptr[7]));
-    tmp1 = (float) (GETJSAMPLE(elemptr[1]) + GETJSAMPLE(elemptr[6]));
-    tmp6 = (float) (GETJSAMPLE(elemptr[1]) - GETJSAMPLE(elemptr[6]));
-    tmp2 = (float) (GETJSAMPLE(elemptr[2]) + GETJSAMPLE(elemptr[5]));
-    tmp5 = (float) (GETJSAMPLE(elemptr[2]) - GETJSAMPLE(elemptr[5]));
-    tmp3 = (float) (GETJSAMPLE(elemptr[3]) + GETJSAMPLE(elemptr[4]));
-    tmp4 = (float) (GETJSAMPLE(elemptr[3]) - GETJSAMPLE(elemptr[4]));
+    tmp0 = (GETJSAMPLE(elemptr[0]) + GETJSAMPLE(elemptr[7]));
+    tmp7 = (GETJSAMPLE(elemptr[0]) - GETJSAMPLE(elemptr[7]));
+    tmp1 = (GETJSAMPLE(elemptr[1]) + GETJSAMPLE(elemptr[6]));
+    tmp6 = (GETJSAMPLE(elemptr[1]) - GETJSAMPLE(elemptr[6]));
+    tmp2 = (GETJSAMPLE(elemptr[2]) + GETJSAMPLE(elemptr[5]));
+    tmp5 = (GETJSAMPLE(elemptr[2]) - GETJSAMPLE(elemptr[5]));
+    tmp3 = (GETJSAMPLE(elemptr[3]) + GETJSAMPLE(elemptr[4]));
+    tmp4 = (GETJSAMPLE(elemptr[3]) - GETJSAMPLE(elemptr[4]));
     
     /* Even part */
     
@@ -56,7 +58,7 @@ void my_stride_jpeg_fdct_float (float * data, local float* sample_data, const un
     dataptr[0] = tmp10 + tmp11 - 8 * CENTERJSAMPLE; /* phase 3 */
     dataptr[4] = tmp10 - tmp11;
     
-    z1 = (tmp12 + tmp13) * ((float) 0.707106781); /* c4 */
+    z1 = (tmp12 + tmp13) * 0.707106781f; /* c4 */
     dataptr[2] = tmp13 + z1;  /* phase 5 */
     dataptr[6] = tmp13 - z1;
     
@@ -67,10 +69,10 @@ void my_stride_jpeg_fdct_float (float * data, local float* sample_data, const un
     tmp12 = tmp6 + tmp7;
     
     /* The rotator is modified from fig 4-8 to avoid extra negations. */
-    z5 = (tmp10 - tmp12) * ((float) 0.382683433); /* c6 */
-    z2 = ((float) 0.541196100) * tmp10 + z5; /* c2-c6 */
-    z4 = ((float) 1.306562965) * tmp12 + z5; /* c2+c6 */
-    z3 = tmp11 * ((float) 0.707106781); /* c4 */
+    z5 = (tmp10 - tmp12) * 0.382683433f; /* c6 */
+    z2 = 0.541196100f * tmp10 + z5; /* c2-c6 */
+    z4 = 1.306562965f * tmp12 + z5; /* c2+c6 */
+    z3 = tmp11 * 0.707106781f; /* c4 */
     
     z11 = tmp7 + z3;    /* phase 5 */
     z13 = tmp7 - z3;
@@ -80,13 +82,13 @@ void my_stride_jpeg_fdct_float (float * data, local float* sample_data, const un
     dataptr[1] = z11 + z4;
     dataptr[7] = z11 - z4;
     
-    dataptr += DCTSIZE;    /* advance pointer to next row */
   }
   
   /* Pass 2: process columns. */
   
-  dataptr = data;
-  for (ctr = DCTSIZE-1; ctr >= 0; ctr--) {
+  for (int ctr = 0; ctr < DCTSIZE; ctr++) {
+    float *dataptr = &data[ctr];
+    
     tmp0 = dataptr[DCTSIZE*0] + dataptr[DCTSIZE*7];
     tmp7 = dataptr[DCTSIZE*0] - dataptr[DCTSIZE*7];
     tmp1 = dataptr[DCTSIZE*1] + dataptr[DCTSIZE*6];
@@ -106,7 +108,7 @@ void my_stride_jpeg_fdct_float (float * data, local float* sample_data, const un
     dataptr[DCTSIZE*0] = tmp10 + tmp11; /* phase 3 */
     dataptr[DCTSIZE*4] = tmp10 - tmp11;
     
-    z1 = (tmp12 + tmp13) * ((float) 0.707106781); /* c4 */
+    z1 = (tmp12 + tmp13) * 0.707106781f; /* c4 */
     dataptr[DCTSIZE*2] = tmp13 + z1; /* phase 5 */
     dataptr[DCTSIZE*6] = tmp13 - z1;
     
@@ -117,10 +119,10 @@ void my_stride_jpeg_fdct_float (float * data, local float* sample_data, const un
     tmp12 = tmp6 + tmp7;
     
     /* The rotator is modified from fig 4-8 to avoid extra negations. */
-    z5 = (tmp10 - tmp12) * ((float) 0.382683433); /* c6 */
-    z2 = ((float) 0.541196100) * tmp10 + z5; /* c2-c6 */
-    z4 = ((float) 1.306562965) * tmp12 + z5; /* c2+c6 */
-    z3 = tmp11 * ((float) 0.707106781); /* c4 */
+    z5 = (tmp10 - tmp12) * 0.382683433f; /* c6 */
+    z2 = 0.541196100f * tmp10 + z5; /* c2-c6 */
+    z4 = 1.306562965f * tmp12 + z5; /* c2+c6 */
+    z3 = tmp11 * 0.707106781f; /* c4 */
     
     z11 = tmp7 + z3;    /* phase 5 */
     z13 = tmp7 - z3;
@@ -130,73 +132,37 @@ void my_stride_jpeg_fdct_float (float * data, local float* sample_data, const un
     dataptr[DCTSIZE*1] = z11 + z4;
     dataptr[DCTSIZE*7] = z11 - z4;
     
-    dataptr++;      /* advance pointer to next column */
   }
 }
 
 
-void my_jpeg_idct_float (unsigned char* range_limit, float *quantptr, short *coef_block, float *output_buf)
+void my_jpeg_idct_float (const float constant *quantptr_, float *coef_block)
 {
   float tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
   float tmp10, tmp11, tmp12, tmp13;
   float z5, z10, z11, z12, z13;
-  short *inptr;
   //FLOAT_MULT_TYPE * quantptr;
-  float * wsptr;
-  float* outptr;
   //JSAMPLE *range_limit = cinfo->sample_range_limit;
-  int ctr;
-  float workspace[DCTSIZE2]; /* buffers data between passes */
   
   /* Pass 1: process columns from input, store into work array. */
   
-  inptr = coef_block;
   //quantptr = (FLOAT_MULT_TYPE *) compptr->dct_table;
-  wsptr = workspace;
-  for (ctr = DCTSIZE; ctr > 0; ctr--) {
-    /* Due to quantization, we will usually find that many of the input
-     * coefficients are zero, especially the AC terms.  We can exploit this
-     * by short-circuiting the IDCT calculation for any column in which all
-     * the AC terms are zero.  In that case each output is equal to the
-     * DC coefficient (with scale factor as needed).
-     * With typical images and quantization tables, half or more of the
-     * column DCT calculations can be simplified this way.
-     */
-    
-    if (inptr[DCTSIZE*1] == 0 && inptr[DCTSIZE*2] == 0 &&
-        inptr[DCTSIZE*3] == 0 && inptr[DCTSIZE*4] == 0 &&
-        inptr[DCTSIZE*5] == 0 && inptr[DCTSIZE*6] == 0 &&
-        inptr[DCTSIZE*7] == 0) {
-      /* AC terms all zero */
-      float dcval = DEQUANTIZE(inptr[DCTSIZE*0], quantptr[DCTSIZE*0]);
-      
-      wsptr[DCTSIZE*0] = dcval;
-      wsptr[DCTSIZE*1] = dcval;
-      wsptr[DCTSIZE*2] = dcval;
-      wsptr[DCTSIZE*3] = dcval;
-      wsptr[DCTSIZE*4] = dcval;
-      wsptr[DCTSIZE*5] = dcval;
-      wsptr[DCTSIZE*6] = dcval;
-      wsptr[DCTSIZE*7] = dcval;
-      
-      inptr++;      /* advance pointers to next column */
-      quantptr++;
-      wsptr++;
-      continue;
-    }
-    
+  
+  for (int ctr = 0; ctr < DCTSIZE; ctr++) {
+    float *wsptr = &coef_block[ctr];
+    const float constant *quantptr = quantptr_ + ctr;
     /* Even part */
     
-    tmp0 = DEQUANTIZE(inptr[DCTSIZE*0], quantptr[DCTSIZE*0]);
-    tmp1 = DEQUANTIZE(inptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
-    tmp2 = DEQUANTIZE(inptr[DCTSIZE*4], quantptr[DCTSIZE*4]);
-    tmp3 = DEQUANTIZE(inptr[DCTSIZE*6], quantptr[DCTSIZE*6]);
+    tmp0 = DEQUANTIZE(wsptr[DCTSIZE*0], quantptr[DCTSIZE*0]);
+    tmp1 = DEQUANTIZE(wsptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
+    tmp2 = DEQUANTIZE(wsptr[DCTSIZE*4], quantptr[DCTSIZE*4]);
+    tmp3 = DEQUANTIZE(wsptr[DCTSIZE*6], quantptr[DCTSIZE*6]);
     
     tmp10 = tmp0 + tmp2;  /* phase 3 */
     tmp11 = tmp0 - tmp2;
     
     tmp13 = tmp1 + tmp3;  /* phases 5-3 */
-    tmp12 = (tmp1 - tmp3) * ((float) 1.414213562) - tmp13; /* 2*c4 */
+    tmp12 = (tmp1 - tmp3) * 1.414213562f - tmp13; /* 2*c4 */
     
     tmp0 = tmp10 + tmp13;  /* phase 2 */
     tmp3 = tmp10 - tmp13;
@@ -205,10 +171,10 @@ void my_jpeg_idct_float (unsigned char* range_limit, float *quantptr, short *coe
     
     /* Odd part */
     
-    tmp4 = DEQUANTIZE(inptr[DCTSIZE*1], quantptr[DCTSIZE*1]);
-    tmp5 = DEQUANTIZE(inptr[DCTSIZE*3], quantptr[DCTSIZE*3]);
-    tmp6 = DEQUANTIZE(inptr[DCTSIZE*5], quantptr[DCTSIZE*5]);
-    tmp7 = DEQUANTIZE(inptr[DCTSIZE*7], quantptr[DCTSIZE*7]);
+    tmp4 = DEQUANTIZE(wsptr[DCTSIZE*1], quantptr[DCTSIZE*1]);
+    tmp5 = DEQUANTIZE(wsptr[DCTSIZE*3], quantptr[DCTSIZE*3]);
+    tmp6 = DEQUANTIZE(wsptr[DCTSIZE*5], quantptr[DCTSIZE*5]);
+    tmp7 = DEQUANTIZE(wsptr[DCTSIZE*7], quantptr[DCTSIZE*7]);
     
     z13 = tmp6 + tmp5;    /* phase 6 */
     z10 = tmp6 - tmp5;
@@ -216,11 +182,11 @@ void my_jpeg_idct_float (unsigned char* range_limit, float *quantptr, short *coe
     z12 = tmp4 - tmp7;
     
     tmp7 = z11 + z13;    /* phase 5 */
-    tmp11 = (z11 - z13) * ((float) 1.414213562); /* 2*c4 */
+    tmp11 = (z11 - z13) * 1.414213562f; /* 2*c4 */
     
-    z5 = (z10 + z12) * ((float) 1.847759065); /* 2*c2 */
-    tmp10 = z5 - z12 * ((float) 1.082392200); /* 2*(c2-c6) */
-    tmp12 = z5 - z10 * ((float) 2.613125930); /* 2*(c2+c6) */
+    z5 = (z10 + z12) * 1.847759065f; /* 2*c2 */
+    tmp10 = z5 - z12 * 1.082392200f; /* 2*(c2-c6) */
+    tmp12 = z5 - z10 * 2.613125930f; /* 2*(c2+c6) */
     
     tmp6 = tmp12 - tmp7;  /* phase 2 */
     tmp5 = tmp11 - tmp6;
@@ -235,16 +201,12 @@ void my_jpeg_idct_float (unsigned char* range_limit, float *quantptr, short *coe
     wsptr[DCTSIZE*3] = tmp3 + tmp4;
     wsptr[DCTSIZE*4] = tmp3 - tmp4;
     
-    inptr++;      /* advance pointers to next column */
-    quantptr++;
-    wsptr++;
   }
   
   /* Pass 2: process rows from work array, store into output array. */
   
-  wsptr = workspace;
-  for (ctr = 0; ctr < DCTSIZE; ctr++) {
-    outptr = &output_buf[ctr*DCTSIZE];
+  
+  for (int ctr = 0; ctr < DCTSIZE; ctr++) {
     /* Rows of zeroes can be exploited in the same way as we did with columns.
      * However, the column calculation has created many nonzero AC terms, so
      * the simplification applies less often (typically 5% to 10% of the time).
@@ -254,12 +216,13 @@ void my_jpeg_idct_float (unsigned char* range_limit, float *quantptr, short *coe
     /* Even part */
     
     /* Apply signed->unsigned and prepare float->int conversion */
-    z5 = wsptr[0] + ((float) CENTERJSAMPLE + (float) 0.5);
+    float *wsptr = &coef_block[ctr*DCTSIZE];
+    z5 = wsptr[0] + (CENTERJSAMPLE + 0.5f);
     tmp10 = z5 + wsptr[4];
     tmp11 = z5 - wsptr[4];
     
     tmp13 = wsptr[2] + wsptr[6];
-    tmp12 = (wsptr[2] - wsptr[6]) * ((float) 1.414213562) - tmp13;
+    tmp12 = (wsptr[2] - wsptr[6]) * 1.414213562f - tmp13;
     
     tmp0 = tmp10 + tmp13;
     tmp3 = tmp10 - tmp13;
@@ -274,11 +237,11 @@ void my_jpeg_idct_float (unsigned char* range_limit, float *quantptr, short *coe
     z12 = wsptr[1] - wsptr[7];
     
     tmp7 = z11 + z13;
-    tmp11 = (z11 - z13) * ((float) 1.414213562);
+    tmp11 = (z11 - z13) * 1.414213562f;
     
-    z5 = (z10 + z12) * ((float) 1.847759065); /* 2*c2 */
-    tmp10 = z5 - z12 * ((float) 1.082392200); /* 2*(c2-c6) */
-    tmp12 = z5 - z10 * ((float) 2.613125930); /* 2*(c2+c6) */
+    z5 = (z10 + z12) * 1.847759065f; /* 2*c2 */
+    tmp10 = z5 - z12 * 1.082392200f; /* 2*(c2-c6) */
+    tmp12 = z5 - z10 * 2.613125930f; /* 2*(c2+c6) */
     
     tmp6 = tmp12 - tmp7;
     tmp5 = tmp11 - tmp6;
@@ -286,58 +249,32 @@ void my_jpeg_idct_float (unsigned char* range_limit, float *quantptr, short *coe
     
     /* Final output stage: float->int conversion and range-limit */
     
-    outptr[0] = range_limit[((int) (tmp0 + tmp7)) & RANGE_MASK];
-    outptr[7] = range_limit[((int) (tmp0 - tmp7)) & RANGE_MASK];
-    outptr[1] = range_limit[((int) (tmp1 + tmp6)) & RANGE_MASK];
-    outptr[6] = range_limit[((int) (tmp1 - tmp6)) & RANGE_MASK];
-    outptr[2] = range_limit[((int) (tmp2 + tmp5)) & RANGE_MASK];
-    outptr[5] = range_limit[((int) (tmp2 - tmp5)) & RANGE_MASK];
-    outptr[3] = range_limit[((int) (tmp3 + tmp4)) & RANGE_MASK];
-    outptr[4] = range_limit[((int) (tmp3 - tmp4)) & RANGE_MASK];
-    
-    wsptr += DCTSIZE;    /* advance pointer to next row */
+    wsptr[0] = RANGE_LIMIT(tmp0 + tmp7);
+    wsptr[7] = RANGE_LIMIT(tmp0 - tmp7);
+    wsptr[1] = RANGE_LIMIT(tmp1 + tmp6);
+    wsptr[6] = RANGE_LIMIT(tmp1 - tmp6);
+    wsptr[2] = RANGE_LIMIT(tmp2 + tmp5);
+    wsptr[5] = RANGE_LIMIT(tmp2 - tmp5);
+    wsptr[3] = RANGE_LIMIT(tmp3 + tmp4);
+    wsptr[4] = RANGE_LIMIT(tmp3 - tmp4);
   }
 }
 
-void strideFloatDCT(local float *sample_data, const unsigned int stride, float *data,  float constant *scaleMatQuant,  float constant *scaleMatDequant)
+void strideFloatDCT(local float *sample_data, const unsigned int stride, float *data,  const float constant *scaleMatQuant)
 {
   
-  //jpeg_fdct_float(data, sample_data, 0);
   my_stride_jpeg_fdct_float(data, sample_data, stride);
-  //static const double aanscalefactor[DCTSIZE] = {    1.0, 1.387039845, 1.306562965, 1.175875602,    1.0, 0.785694958, 0.541196100, 0.275899379  };
-  short shortData[DCTSIZE2];
+  
   for (int i = 0; i < 8; ++i) {
     for (int j = 0; j < 8; ++j) {
-      //shortData[i * 8 + j] = data[i * 8 + j] *(1/ (8 * aanscalefactor[i] * aanscalefactor[j] * cinfo.quant_tbl_ptrs[0]->quantval[i*DCTSIZE+j]/* * quantMatrix */));
-      //shortData[i * 8 + j] = data[i * 8 + j] *(1/ (8 * aanscalefactor[i] * aanscalefactor[j] ));
-      //shortData[i * 8 + j] = data[i * 8 + j] *scaleMatQuant[i * 8 + j]* cinfo.quant_tbl_ptrs[0]->quantval[i*DCTSIZE+j];
-      shortData[i * 8 + j] = round(data[i * 8 + j] * scaleMatQuant[i * 8 + j]);
+      data[i * 8 + j] = rint(data[i * 8 + j] * scaleMatQuant[i * 8 + j]);
     }
   }
-  float dctTable[DCTSIZE2];
-  for (int i = 0; i<DCTSIZE; i++){
-    for (int j = 0; j<DCTSIZE; j++){
-      //dctTable[i*DCTSIZE+j] = aanscalefactor[i]*aanscalefactor[j]*0.125 * cinfo.quant_tbl_ptrs[0]->quantval[i*DCTSIZE+j];
-      //dctTable[i*DCTSIZE+j] = aanscalefactor[i]*aanscalefactor[j]*0.125;
-      //dctTable[i*DCTSIZE+j] = scaleMatDequant[i*DCTSIZE+j]/cinfo.quant_tbl_ptrs[0]->quantval[i*DCTSIZE+j];
-      dctTable[i*DCTSIZE+j] = scaleMatDequant[i*DCTSIZE+j];
-    }
-  }
-  unsigned char range_limit[1024];
-  for (int i = 512; i<768; i++){
-    range_limit[i] = i-512;
-  }
-  for (int i = 0; i<512; i++){
-    range_limit[i] = 0;
-  }
-  for (int i = 768; i<1024; i++){
-    range_limit[i] = 255;
-  }
-  my_jpeg_idct_float(&range_limit[512], dctTable, shortData, data);
+  my_jpeg_idct_float(&scaleMatQuant[DCTSIZE2], data);
 }
 
 
-kernel void reapplicationJPEG(const uchar global *rawImg, const uint rows, const uint cols, short global *resDCT,  float constant *scaleMatQuant,  float constant *dctTable, const uint offset, const uint stride)
+kernel void reapplicationJPEG(const uchar global *rawImg, const uint rows, const uint cols, short global *resDCT,  constant const float  *scaleMatQuant, const uint offset, const uint stride)
 {
   
   local union{
@@ -358,7 +295,7 @@ kernel void reapplicationJPEG(const uchar global *rawImg, const uint rows, const
   int y = get_local_id(0)/8;
   
   float res[DCTSIZE2];
-  strideFloatDCT(&mat.mat_1D[y*LOCAL_WINDOW_SIZE+x], LOCAL_WINDOW_SIZE, res, scaleMatQuant, dctTable);
+  strideFloatDCT(&mat.mat_1D[y*LOCAL_WINDOW_SIZE+x], LOCAL_WINDOW_SIZE, res, scaleMatQuant);
   
   barrier(CLK_LOCAL_MEM_FENCE);
   mat.mat4_2D[y2][x2] = 0.0f;
@@ -383,7 +320,7 @@ kernel void justFloatDCT(const uchar global *rawImg, const uint rows, const uint
   for (int i = 0; i<DCTSIZE2; i++)
     mat[i] = rawImg[i];
   float res[DCTSIZE2];
-  strideFloatDCT(mat, DCTSIZE, res, scaleMatQuant, dctTable);
+  //strideFloatDCT(mat, DCTSIZE, res, scaleMatQuant, dctTable);
   for (int i = 0; i<DCTSIZE; i++)
     for (int j = 0; j<DCTSIZE; j++)
       resDCT[i*DCTSIZE+j] = res[i*DCTSIZE+j];
@@ -472,6 +409,6 @@ kernel void divMat(short global *resDCT, uchar global *resImg, const uint rows, 
   
   
   //resDCT[y*cols+x] = convert_uchar_sat(tmp/64);
-  *(global short8*)&resDCT[y*cols+x*DCTSIZE] = tmp;
+  *(global uchar8*)&resImg[y*cols+x*DCTSIZE] = convert_uchar8_sat_rte(tmp);
 }
 

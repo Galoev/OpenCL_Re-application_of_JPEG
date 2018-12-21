@@ -181,31 +181,21 @@ int super_mega_opencl()
     1.0, 0.785694958, 0.541196100, 0.275899379
   };
   
-  float *quant = new float[DCTSIZE2];
-  img.getQuantMat("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/JPEG_example_JPG_RIP_010_gray.jpg", quant);
-  
-  float  scaleMatQuant[DCTSIZE2];
+  float  scaleMatQuant[DCTSIZE2 * 2];
   for (int i = 0; i<DCTSIZE; i++)
     for (int j = 0; j<DCTSIZE; j++)
-    {
-      //scaleMatQuant[i*DCTSIZE+j] = 1.0/(aanscalefactor[i]*aanscalefactor[j]*8.0* quant[i*DCTSIZE+j]);
       scaleMatQuant[i*DCTSIZE+j] = 1.0/(aanscalefactor[i]*aanscalefactor[j]*8.0* img.getElemQuantTbl(i*DCTSIZE+j));
-    }
   
-  float  dctTable[DCTSIZE2];
+  
   for (int i = 0; i<DCTSIZE; i++)
     for (int j = 0; j<DCTSIZE; j++)
-    {
-      //dctTable[i*DCTSIZE+j] = (aanscalefactor[i]*aanscalefactor[j]*0.125 * quant[i*DCTSIZE+j]);
-      dctTable[i*DCTSIZE+j] = (aanscalefactor[i]*aanscalefactor[j]*0.125 * img.getElemQuantTbl(i*DCTSIZE+j));
-    }
+      scaleMatQuant[i*DCTSIZE+j+ DCTSIZE2] = (aanscalefactor[i]*aanscalefactor[j]*0.125 * img.getElemQuantTbl(i*DCTSIZE+j));
   
   cl_mem buff_rawImg = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uchar)*rows*cols, nullptr, nullptr);
   cl_mem buff_resDCT = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(cl_short)*rows*cols, nullptr, nullptr);
-  cl_mem buff_scaleMatQuant = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float)*DCTSIZE2, nullptr, nullptr);
-  cl_mem buff_dctTable = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float)*DCTSIZE2, nullptr, nullptr);
+  cl_mem buff_scaleMatQuant = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float)*DCTSIZE2*2, nullptr, nullptr);
   
-  if (!buff_rawImg || !buff_resDCT || !buff_scaleMatQuant || !buff_dctTable ) {
+  if (!buff_rawImg || !buff_resDCT || !buff_scaleMatQuant ) {
     printf("Alloc mem error\n");
     return 5;
   }
@@ -215,8 +205,7 @@ int super_mega_opencl()
   
   clEnqueueWriteBuffer(command_queue, buff_rawImg, false, 0, sizeof(cl_uchar)*rows*cols, rawImg, 0, nullptr, nullptr);
   clEnqueueWriteBuffer(command_queue, buff_resDCT, false, 0, sizeof(cl_short)*rows*cols, matDCT, 0, nullptr, nullptr);
-  clEnqueueWriteBuffer(command_queue, buff_scaleMatQuant, false, 0, sizeof(cl_float)*DCTSIZE2, scaleMatQuant, 0, nullptr, nullptr);
-  clEnqueueWriteBuffer(command_queue, buff_dctTable, false, 0, sizeof(cl_float)*DCTSIZE2, dctTable, 0, nullptr, nullptr);
+  clEnqueueWriteBuffer(command_queue, buff_scaleMatQuant, false, 0, sizeof(cl_float)*DCTSIZE2*2, scaleMatQuant, 0, nullptr, nullptr);
   
   
   
@@ -227,9 +216,8 @@ int super_mega_opencl()
   clSetKernelArg(dctKernel, 2, sizeof(cl_uint), &cols);
   clSetKernelArg(dctKernel, 3, sizeof(cl_mem), &buff_resDCT);
   clSetKernelArg(dctKernel, 4, sizeof(cl_mem), &buff_scaleMatQuant);
-  clSetKernelArg(dctKernel, 5, sizeof(cl_mem), &buff_dctTable);
-  //clSetKernelArg(dctKernel, 6, sizeof(cl_uint), &offset);
-  clSetKernelArg(dctKernel, 7, sizeof(cl_uint), &cols);
+  //clSetKernelArg(dctKernel, 5, sizeof(cl_uint), &offset);
+  clSetKernelArg(dctKernel, 6, sizeof(cl_uint), &cols);
   
  
   short tmpZero = 0;
@@ -244,7 +232,7 @@ int super_mega_opencl()
       int x_start = x_offset;
       int x_end = ((cols-x_offset)/LOCAL_WINDOW_SIZE)*LOCAL_WINDOW_SIZE+x_offset;
       offset = y_offset*cols + x_offset;
-      clSetKernelArg(dctKernel, 6, sizeof(cl_uint), &offset);
+      clSetKernelArg(dctKernel, 5, sizeof(cl_uint), &offset);
       size_t dct_local_work_size[2] = { DCTSIZE2, 1};
       size_t newRows = ((y_end-y_start)/LOCAL_WINDOW_SIZE)*dct_local_work_size[1];
       size_t newCols = ((x_end-x_start)/LOCAL_WINDOW_SIZE)*dct_local_work_size[0];
@@ -270,16 +258,16 @@ int super_mega_opencl()
   clEnqueueWriteBuffer(command_queue, buff_mat, false, 0, sizeof(cl_int)*DCTSIZE2, mat, 0, nullptr, nullptr);
   
   
-  cl_mem buff_resImg = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_uchar)*rows*cols, nullptr, nullptr);
-  clEnqueueFillBuffer(command_queue, buff_resImg, &tmpZero, 1, 0, sizeof(cl_uchar)*rows*cols, 0, nullptr, nullptr);
+  //cl_mem buff_resImg = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_uchar)*rows*cols, nullptr, nullptr);
+  //clEnqueueFillBuffer(command_queue, buff_resImg, &tmpZero, 1, 0, sizeof(cl_uchar)*rows*cols, 0, nullptr, nullptr);
   
   clSetKernelArg(divMat, 0, sizeof(cl_mem), &buff_resDCT);
-  clSetKernelArg(divMat, 1, sizeof(cl_mem), &buff_resImg);
+  clSetKernelArg(divMat, 1, sizeof(cl_mem), &buff_rawImg);
   clSetKernelArg(divMat, 2, sizeof(cl_uint), &rows);
   clSetKernelArg(divMat, 3, sizeof(cl_uint), &cols);
   
   
-  size_t global_work_size[2] = {cols/DCTSIZE, rows};
+  size_t global_work_size[2] = { cols / DCTSIZE, rows };
   cl_event kernel_event;
   
   if (clEnqueueNDRangeKernel(command_queue, divMat, 2, nullptr, global_work_size, nullptr, 0, nullptr, &kernel_event)) {
@@ -290,13 +278,13 @@ int super_mega_opencl()
   
   unsigned char *resImg = new unsigned char[rows * cols];
   
-  clEnqueueReadBuffer(command_queue, buff_resDCT, true, 0, sizeof(cl_short)*rows*cols, matDCT, 0, nullptr, nullptr);
+  clEnqueueReadBuffer(command_queue, buff_rawImg, true, 0, sizeof(cl_uchar)*rows*cols, resImg, 0, nullptr, nullptr);
   /*
    for (int i = 0; i<rows*cols; i++){
    matDCT[i] /= 64.0;
    }*/
   
-  img.writePGMimage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/JPEG_example_JPG_RIP_010_gray_OPENCL.pgm", matDCT);
+  img.writePGMimage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/JPEG_example_JPG_RIP_010_gray_OPENCL.pgm", resImg);
   /*
    cout<<"C: "<<endl;
    for (int i = 0; i<SIZE_X; i++)
