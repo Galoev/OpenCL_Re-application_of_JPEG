@@ -245,6 +245,11 @@ int super_mega_opencl()
         printf("Kernel execution failed\n");
         return 6;
       }
+      cl_ulong startTime, endTime;
+      clGetEventProfilingInfo(kernel_event, CL_PROFILING_COMMAND_START, sizeof(startTime), &startTime, NULL);
+      clGetEventProfilingInfo(kernel_event, CL_PROFILING_COMMAND_END, sizeof(endTime), &endTime, NULL);
+      double res = (endTime - startTime) ;
+      printf("Kernel time program %f\n", res);
     }
   }
   

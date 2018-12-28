@@ -32,6 +32,7 @@ void my_stride_jpeg_fdct_float (float * data, local float* sample_data, const un
   /* Pass 1: process rows. */
   
   
+#pragma unroll
   for (int ctr = 0; ctr < DCTSIZE; ctr++) {
     //elemptr = sample_data[ctr] + start_col;
     float *dataptr = &data[ctr*DCTSIZE];
@@ -86,6 +87,7 @@ void my_stride_jpeg_fdct_float (float * data, local float* sample_data, const un
   
   /* Pass 2: process columns. */
   
+#pragma unroll
   for (int ctr = 0; ctr < DCTSIZE; ctr++) {
     float *dataptr = &data[ctr];
     
@@ -148,6 +150,7 @@ void my_jpeg_idct_float (const float constant *quantptr_, float *coef_block)
   
   //quantptr = (FLOAT_MULT_TYPE *) compptr->dct_table;
   
+#pragma unroll
   for (int ctr = 0; ctr < DCTSIZE; ctr++) {
     float *wsptr = &coef_block[ctr];
     const float constant *quantptr = quantptr_ + ctr;
@@ -206,6 +209,7 @@ void my_jpeg_idct_float (const float constant *quantptr_, float *coef_block)
   /* Pass 2: process rows from work array, store into output array. */
   
   
+#pragma unroll
   for (int ctr = 0; ctr < DCTSIZE; ctr++) {
     /* Rows of zeroes can be exploited in the same way as we did with columns.
      * However, the column calculation has created many nonzero AC terms, so
@@ -265,7 +269,9 @@ void strideFloatDCT(local float *sample_data, const unsigned int stride, float *
   
   my_stride_jpeg_fdct_float(data, sample_data, stride);
   
+#pragma unroll
   for (int i = 0; i < 8; ++i) {
+#pragma unroll
     for (int j = 0; j < 8; ++j) {
       data[i * 8 + j] = rint(data[i * 8 + j] * scaleMatQuant[i * 8 + j]);
     }
@@ -274,7 +280,7 @@ void strideFloatDCT(local float *sample_data, const unsigned int stride, float *
 }
 
 
-kernel void reapplicationJPEG(const uchar global *rawImg, const uint rows, const uint cols, short global *resDCT,  constant const float  *scaleMatQuant, const uint offset, const uint stride)
+kernel __attribute__((reqd_work_group_size(64, 1, 1))) void reapplicationJPEG(const uchar global *rawImg, const uint rows, const uint cols, short global *resDCT,  constant const float  *scaleMatQuant, const uint offset, const uint stride)
 {
   
   local union{
@@ -314,6 +320,8 @@ kernel void reapplicationJPEG(const uchar global *rawImg, const uint rows, const
   
 }
 
+
+
 kernel void justFloatDCT(const uchar global *rawImg, const uint rows, const uint cols, short global *resDCT, float constant *scaleMatQuant, float constant *dctTable, const uint offset, const uint stride)
 {
   local uchar mat[DCTSIZE2];
@@ -327,84 +335,85 @@ kernel void justFloatDCT(const uchar global *rawImg, const uint rows, const uint
 }
 
 
+
+__constant const float8 MatUL[DCTSIZE] = {
+  (float8)(1/1.0f,  1/2.0f,  1/3.0f,  1/4.0f,  1/5.0f,  1/6.0f,  1/7.0f,  1/8.0f),
+  (float8)(1/2.0f,  1/4.0f,  1/6.0f,  1/8.0f,  1/10.0f,  1/12.0f,  1/14.0f,  1/16.0f),
+  (float8)(1/3.0f,  1/6.0f,  1/9.0f,  1/12.0f,  1/15.0f,  1/18.0f,  1/21.0f,  1/24.0f),
+  (float8)(1/4.0f,  1/8.0f,  1/12.0f,  1/16.0f,  1/20.0f,  1/24.0f,  1/28.0f,  1/32.0f),
+  (float8)(1/5.0f,  1/10.0f,  1/15.0f,  1/20.0f,  1/25.0f,  1/30.0f,  1/35.0f,  1/40.0f),
+  (float8)(1/6.0f,  1/12.0f,  1/18.0f,  1/24.0f,  1/30.0f,  1/36.0f,  1/42.0f,  1/48.0f),
+  (float8)(1/7.0f,  1/14.0f,  1/21.0f,  1/28.0f,  1/35.0f,  1/42.0f,  1/49.0f,  1/56.0f),
+  (float8)(1/8.0f,  1/16.0f,  1/24.0f,  1/32.0f,  1/40.0f,  1/48.0f,  1/56.0f,  1/64.0f)
+};
+
+__constant const float8 MatDL[DCTSIZE] = {
+  (float8)(1/8.0f,  1/16.0f,  1/24.0f,  1/32.0f,  1/40.0f,  1/48.0f,  1/56.0f,  1/64.0f),
+  (float8)(1/7.0f,  1/14.0f,  1/21.0f,  1/28.0f,  1/35.0f,  1/42.0f,  1/49.0f,  1/56.0f),
+  (float8)(1/6.0f,  1/12.0f,  1/18.0f,  1/24.0f,  1/30.0f,  1/36.0f,  1/42.0f,  1/48.0f),
+  (float8)(1/5.0f,  1/10.0f,  1/15.0f,  1/20.0f,  1/25.0f,  1/30.0f,  1/35.0f,  1/40.0f),
+  (float8)(1/4.0f,  1/8.0f,  1/12.0f,  1/16.0f,  1/20.0f,  1/24.0f,  1/28.0f,  1/32.0f),
+  (float8)(1/3.0f,  1/6.0f,  1/9.0f,  1/12.0f,  1/15.0f,  1/18.0f,  1/21.0f,  1/24.0f),
+  (float8)(1/2.0f,  1/4.0f,  1/6.0f,  1/8.0f,  1/10.0f,  1/12.0f,  1/14.0f,  1/16.0f),
+  (float8)(1/1.0f,  1/2.0f,  1/3.0f,  1/4.0f,  1/5.0f,  1/6.0f,  1/7.0f,  1/8.0f)
+};
+
+__constant const float8 MatUR[DCTSIZE] = {
+  (float8)(1/8.0f,  1/7.0f,  1/6.0f,  1/5.0f,  1/4.0f,  1/3.0f,  1/2.0f,  1/1.0f),
+  (float8)(1/16.0f,  1/14.0f,  1/12.0f,  1/10.0f,  1/8.0f,  1/6.0f,  1/4.0f,  1/2.0f),
+  (float8)(1/24.0f,  1/21.0f,  1/18.0f,  1/15.0f,  1/12.0f,  1/9.0f,  1/6.0f,  1/3.0f),
+  (float8)(1/32.0f,  1/28.0f,  1/24.0f,  1/20.0f,  1/16.0f,  1/12.0f,  1/8.0f,  1/4.0f),
+  (float8)(1/40.0f,  1/35.0f,  1/30.0f,  1/25.0f,  1/20.0f,  1/15.0f,  1/10.0f,  1/5.0f),
+  (float8)(1/48.0f,  1/42.0f,  1/36.0f,  1/30.0f,  1/24.0f,  1/18.0f,  1/12.0f,  1/6.0f),
+  (float8)(1/56.0f,  1/49.0f,  1/42.0f,  1/35.0f,  1/28.0f,  1/21.0f,  1/14.0f,  1/7.0f),
+  (float8)(1/64.0f,  1/56.0f,  1/48.0f,  1/40.0f,  1/32.0f,  1/24.0f,  1/16.0f,  1/8.0f)
+};
+
+__constant const float8 MatDR[DCTSIZE] = {
+  (float8)(1/64.0f,  1/56.0f,  1/48.0f,  1/40.0f,  1/32.0f,  1/24.0f,  1/16.0f,  1/8.0f),
+  (float8)(1/56.0f,  1/49.0f,  1/42.0f,  1/35.0f,  1/28.0f,  1/21.0f,  1/14.0f,  1/7.0f),
+  (float8)(1/48.0f,  1/42.0f,  1/36.0f,  1/30.0f,  1/24.0f,  1/18.0f,  1/12.0f,  1/6.0f),
+  (float8)(1/40.0f,  1/35.0f,  1/30.0f,  1/25.0f,  1/20.0f,  1/15.0f,  1/10.0f,  1/5.0f),
+  (float8)(1/32.0f,  1/28.0f,  1/24.0f,  1/20.0f,  1/16.0f,  1/12.0f,  1/8.0f,  1/4.0f),
+  (float8)(1/24.0f,  1/21.0f,  1/18.0f,  1/15.0f,  1/12.0f,  1/9.0f,  1/6.0f,  1/3.0f),
+  (float8)(1/16.0f,  1/14.0f,  1/12.0f,  1/10.0f,  1/8.0f,  1/6.0f,  1/4.0f,  1/2.0f),
+  (float8)(1/8.0f,  1/7.0f,  1/6.0f,  1/5.0f,  1/4.0f,  1/3.0f,  1/2.0f,  1/1.0f)
+};
+
 kernel void divMat(short global *resDCT, uchar global *resImg, const uint rows, const uint cols)
 {
   int x = get_global_id(0);
   int y = get_global_id(1);
   
   
-  short8 MatUL[DCTSIZE] = {
-    (short8)(1, 2, 3, 4, 5, 6, 7, 8),
-    (short8)(2, 4, 6, 8, 10, 12, 14, 16),
-    (short8)(3, 6, 9, 12, 15, 18, 21, 24),
-    (short8)(4, 8, 12, 16, 20, 24, 28, 32),
-    (short8)(5, 10, 15, 20, 25, 30, 35, 40),
-    (short8)(6, 12, 18, 24, 30, 36, 42, 48),
-    (short8)(7, 14, 21, 28, 35, 42, 49, 56),
-    (short8)(8, 16, 24, 32, 40, 48, 56, 64)
-  };
-  
-  short8 MatDL[DCTSIZE] = {
-    (short8)(8, 16, 24, 32, 40, 48, 56, 64),
-    (short8)(7, 14, 21, 28, 35, 42, 49, 56),
-    (short8)(6, 12, 18, 24, 30, 36, 42, 48),
-    (short8)(5, 10, 15, 20, 25, 30, 35, 40),
-    (short8)(4, 8, 12, 16, 20, 24, 28, 32),
-    (short8)(3, 6, 9, 12, 15, 18, 21, 24),
-    (short8)(2, 4, 6, 8, 10, 12, 14, 16),
-    (short8)(1, 2, 3, 4, 5, 6, 7, 8)
-  };
-  
-  short8 MatUR[DCTSIZE] = {
-    (short8)(8, 7, 6, 5, 4, 3, 2, 1),
-    (short8)(16, 14, 12, 10, 8, 6, 4, 2),
-    (short8)(24, 21, 18, 15, 12, 9, 6, 3),
-    (short8)(32, 28, 24, 20, 16, 12, 8, 4),
-    (short8)(40, 35, 30, 25, 20, 15, 10, 5),
-    (short8)(48, 42, 36, 30, 24, 18, 12, 6),
-    (short8)(56, 49, 42, 35, 28, 21, 14, 7),
-    (short8)(64, 56, 48, 40, 32, 24, 16, 8)
-  };
-  
-  short8 MatDR[DCTSIZE] = {
-    (short8)(64, 56, 48, 40, 32, 24, 16, 8),
-    (short8)(56, 49, 42, 35, 28, 21, 14, 7),
-    (short8)(48, 42, 36, 30, 24, 18, 12, 6),
-    (short8)(40, 35, 30, 25, 20, 15, 10, 5),
-    (short8)(32, 28, 24, 20, 16, 12, 8, 4),
-    (short8)(24, 21, 18, 15, 12, 9, 6, 3),
-    (short8)(16, 14, 12, 10, 8, 6, 4, 2),
-    (short8)(8, 7, 6, 5, 4, 3, 2, 1)
-  };
-  
-  short8 tmp = *(global short8*)&resDCT[y*cols+x*DCTSIZE];
+  float8 tmp = convert_float8(*(global short8*)&resDCT[y*cols+x*DCTSIZE]);
   
   if (y>=DCTSIZE && (x*DCTSIZE) >= DCTSIZE && y<(rows-DCTSIZE) && (x*DCTSIZE) <(cols-DCTSIZE)) {
-    tmp /= (short8)(64, 64, 64, 64, 64, 64, 64, 64);
+    tmp *= (float8)(1/64.0f,  1/64.0f,  1/64.0f,  1/64.0f,  1/64.0f,  1/64.0f,  1/64.0f,  1/64.0f);
   } else if (y<DCTSIZE && (x*DCTSIZE)<DCTSIZE) //UL
   {
-    tmp /= MatUL[y%DCTSIZE];
+    tmp *= MatUL[y%DCTSIZE];
   } else if (y>=(rows-DCTSIZE) && (x*DCTSIZE)<DCTSIZE) //DL
   {
-    tmp /= MatDL[y%DCTSIZE];
+    tmp *= MatDL[y%DCTSIZE];
   } else if (y>=(rows-DCTSIZE) && (x*DCTSIZE)>=(cols-DCTSIZE)) //DR
   {
-    tmp /= MatDR[y%DCTSIZE];
+    tmp *= MatDR[y%DCTSIZE];
   } else if (y<DCTSIZE && (x*DCTSIZE)>=(cols-DCTSIZE)) //UR
   {
-    tmp /= MatUR [y%DCTSIZE];
+    tmp *= MatUR [y%DCTSIZE];
   } else if (y<DCTSIZE && (x*DCTSIZE)>=DCTSIZE && (x*DCTSIZE) <(cols-DCTSIZE)) //up side
   {
-    tmp /= (short8)(((y%DCTSIZE)+1)*DCTSIZE);
+    tmp *= (float8)(1.0f/(((y%DCTSIZE)+1)*DCTSIZE));
   } else if (y>=(rows-DCTSIZE) && (x*DCTSIZE)>=DCTSIZE && (x*DCTSIZE) <(cols-DCTSIZE)) //down sise
   {
-    tmp /= (short8)((DCTSIZE-(y%DCTSIZE))*DCTSIZE);
+    tmp *= (float8)(1.0f/((DCTSIZE-(y%DCTSIZE))*DCTSIZE));
   } else if ((x*DCTSIZE)>=(cols-DCTSIZE) && y>=(DCTSIZE) && y<(rows-DCTSIZE)) //right side
   {
-    tmp /= MatUR[DCTSIZE-1];
+    tmp *= MatUR[DCTSIZE-1];
   } else if ((x*DCTSIZE)<DCTSIZE && y>=(DCTSIZE) && y<(rows-DCTSIZE)) // left side
   {
-    tmp /= MatUL[DCTSIZE-1];
+    tmp *= MatUL[DCTSIZE-1];
   }
   
   
