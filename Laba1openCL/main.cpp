@@ -185,7 +185,11 @@ int super_mega_opencl()
   
   
   Image img;
-  
+  img.readColorImage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/wallpapersden.jpg");
+  img.writePGMimage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/wallpapersdenY.pgm", img.getYRawImg());
+  img.writePGMimage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/wallpapersdenCb.pgm", img.getCbRawImg());
+  img.writePGMimage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/wallpapersdenCr.pgm", img.getCrRawImg());
+  img.writeJPEGimage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/wallpapersdenJPEG.jpg");
   img.readImage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/JPEG_example_JPG_RIP_010_gray.jpg");
   
   unsigned int rows = img.getRows();
