@@ -165,7 +165,23 @@ int super_mega_opencl()
     return 4;
   }
   
+  cl_kernel dctRigthEdge = clCreateKernel(program, "dctRigthEdge", nullptr);
+  if (!dctRigthEdge) {
+    printf("Kernel error\n");
+    return 4;
+  }
   
+  cl_kernel dctDownEdge = clCreateKernel(program, "dctDownEdge", nullptr);
+  if (!dctRigthEdge) {
+    printf("Kernel error\n");
+    return 4;
+  }
+  
+  cl_kernel dctCorner = clCreateKernel(program, "dctCorner", nullptr);
+  if (!dctRigthEdge) {
+    printf("Kernel error\n");
+    return 4;
+  }
   
   
   Image img;
@@ -223,6 +239,7 @@ int super_mega_opencl()
   short tmpZero = 0;
   clEnqueueFillBuffer(command_queue, buff_resDCT, &tmpZero, 1, 0, sizeof(short)*rows*cols, 0, nullptr, nullptr);
   ; // сколько тредов запускается
+  cl_event kernel_event;
   for (int y_offset = 0; y_offset<= DCTSIZE; y_offset += DCTSIZE)
   {
     for (int x_offset = 0; x_offset<= DCTSIZE; x_offset += DCTSIZE)
@@ -239,7 +256,7 @@ int super_mega_opencl()
       size_t dct_global_work_size[2] = { newCols, newRows };
       cout << dct_global_work_size << endl;
       //cout<<"offset "<<offset<<" y_offset "<<y_offset<<" x_offset "<<x_offset<<endl<<"y_start "<<y_start<<" y_end "<<y_end<<endl<<"x_start "<<x_start<<" x_end "<<x_end<<endl<<"newRows "<<newRows<<" newCols "<<newCols<<endl<<"=================================="<<endl;
-      cl_event kernel_event;
+      
       if (clEnqueueNDRangeKernel(command_queue, dctKernel, 2, nullptr, dct_global_work_size, dct_local_work_size, 0, nullptr, &kernel_event)) {
         //^размерность потоков
         printf("Kernel execution failed\n");
@@ -253,6 +270,71 @@ int super_mega_opencl()
     }
   }
   
+  clSetKernelArg(dctRigthEdge, 0, sizeof(cl_mem), &buff_rawImg);
+  clSetKernelArg(dctRigthEdge, 1, sizeof(cl_uint), &rows);
+  clSetKernelArg(dctRigthEdge, 2, sizeof(cl_uint), &cols);
+  clSetKernelArg(dctRigthEdge, 3, sizeof(cl_mem), &buff_resDCT);
+  clSetKernelArg(dctRigthEdge, 4, sizeof(cl_mem), &buff_scaleMatQuant);
+  //clSetKernelArg(dctRigthEdge, 5, sizeof(cl_uint), &offset);
+  clSetKernelArg(dctRigthEdge, 6, sizeof(cl_uint), &cols);
+  size_t dctRigthEdge_local_work_size[1] = { DCTSIZE };
+  size_t dctRigthEdge_global_work_size[1] = { rows/2};
+  offset = 0;
+  clSetKernelArg(dctRigthEdge, 5, sizeof(cl_uint), &offset);
+  if (clEnqueueNDRangeKernel(command_queue, dctRigthEdge, 1, nullptr, dctRigthEdge_global_work_size, dctRigthEdge_local_work_size, 0, nullptr, &kernel_event)) {
+    //^размерность потоков
+    printf("Kernel execution FAILED\n");
+    return 6;
+  }
+  dctRigthEdge_local_work_size[0] = DCTSIZE;
+  dctRigthEdge_global_work_size[0] = (rows - LOCAL_WINDOW_SIZE)/2;
+  offset = cols*DCTSIZE;
+  clSetKernelArg(dctRigthEdge, 5, sizeof(cl_uint), &offset);
+  if (clEnqueueNDRangeKernel(command_queue, dctRigthEdge, 1, nullptr, dctRigthEdge_global_work_size, dctRigthEdge_local_work_size, 0, nullptr, &kernel_event)) {
+    //^размерность потоков
+    printf("Kernel execution FAILED\n");
+    return 6;
+  }
+  
+  clSetKernelArg(dctDownEdge, 0, sizeof(cl_mem), &buff_rawImg);
+  clSetKernelArg(dctDownEdge, 1, sizeof(cl_uint), &rows);
+  clSetKernelArg(dctDownEdge, 2, sizeof(cl_uint), &cols);
+  clSetKernelArg(dctDownEdge, 3, sizeof(cl_mem), &buff_resDCT);
+  clSetKernelArg(dctDownEdge, 4, sizeof(cl_mem), &buff_scaleMatQuant);
+  //clSetKernelArg(dctDownEdge, 5, sizeof(cl_uint), &offset);
+  clSetKernelArg(dctDownEdge, 6, sizeof(cl_uint), &cols);
+  size_t dctDownEdge_local_work_size[1] = { DCTSIZE };
+  size_t dctDownEdge_global_work_size[1] = { cols/2 };
+  offset = 0;
+  clSetKernelArg(dctDownEdge, 5, sizeof(cl_uint), &offset);
+  if (clEnqueueNDRangeKernel(command_queue, dctDownEdge, 1, nullptr, dctDownEdge_global_work_size, dctDownEdge_local_work_size, 0, nullptr, &kernel_event)) {
+    //^размерность потоков
+    printf("Kernel execution FAILED\n");
+    return 6;
+  }
+  dctDownEdge_local_work_size[0] = DCTSIZE;
+  dctDownEdge_global_work_size[0] = (cols-LOCAL_WINDOW_SIZE)/2;
+  offset = DCTSIZE;
+  clSetKernelArg(dctDownEdge, 5, sizeof(cl_uint), &offset);
+  if (clEnqueueNDRangeKernel(command_queue, dctDownEdge, 1, nullptr, dctDownEdge_global_work_size, dctDownEdge_local_work_size, 0, nullptr, &kernel_event)) {
+    //^размерность потоков
+    printf("Kernel execution FAILED\n");
+    return 6;
+  }
+  
+  clSetKernelArg(dctCorner, 0, sizeof(cl_mem), &buff_rawImg);
+  clSetKernelArg(dctCorner, 1, sizeof(cl_uint), &rows);
+  clSetKernelArg(dctCorner, 2, sizeof(cl_uint), &cols);
+  clSetKernelArg(dctCorner, 3, sizeof(cl_mem), &buff_resDCT);
+  clSetKernelArg(dctCorner, 4, sizeof(cl_mem), &buff_scaleMatQuant);
+  clSetKernelArg(dctCorner, 5, sizeof(cl_uint), &cols);
+  size_t dctCorner_local_work_size[1] = { DCTSIZE };
+  size_t dctCorner_global_work_size[1] = { DCTSIZE };
+  if (clEnqueueNDRangeKernel(command_queue, dctCorner, 1, nullptr, dctCorner_global_work_size, dctCorner_local_work_size, 0, nullptr, &kernel_event)) {
+    //^размерность потоков
+    printf("Kernel execution FAILED\n");
+    return 6;
+  }
   
   //Копирование данных с девайса на хост ----------------------------------------------
   float c[SIZE_X];
@@ -273,7 +355,7 @@ int super_mega_opencl()
   
   
   size_t global_work_size[2] = { cols / DCTSIZE, rows };
-  cl_event kernel_event;
+  //cl_event kernel_event;
   
   if (clEnqueueNDRangeKernel(command_queue, divMat, 2, nullptr, global_work_size, nullptr, 0, nullptr, &kernel_event)) {
     //^размерность потоков

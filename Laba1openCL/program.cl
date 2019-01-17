@@ -320,6 +320,141 @@ kernel __attribute__((reqd_work_group_size(64, 1, 1))) void reapplicationJPEG(co
   
 }
 
+kernel void dctRigthEdge(const uchar global *rawImg, const uint rows, const uint cols, short global *resDCT,  constant const float  *scaleMatQuant, const uint offset, const uint stride)
+{
+  local union{
+    float mat_1D[LOCAL_WINDOW_SIZE*DCTSIZE];
+    float mat_2D[LOCAL_WINDOW_SIZE][DCTSIZE];
+    float8 mat8[LOCAL_WINDOW_SIZE];
+  } mat;
+  int x = get_local_id(0);
+  
+  mat.mat8[x] = convert_float8(*(global uchar8*)&rawImg[(get_group_id(0)*LOCAL_WINDOW_SIZE+x)*stride+cols-DCTSIZE+offset]);
+  barrier(CLK_LOCAL_MEM_FENCE);
+  mat.mat8[DCTSIZE+x] = convert_float8(*(global uchar8*)&rawImg[(get_group_id(0)*LOCAL_WINDOW_SIZE+DCTSIZE+x)*stride+cols-DCTSIZE+offset]);
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  float res[DCTSIZE2];
+  strideFloatDCT(&mat.mat_1D[x*DCTSIZE], DCTSIZE, res, scaleMatQuant);
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  mat.mat8[x] = 0.0f;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  mat.mat8[DCTSIZE+x] = 0.0f;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  for (int i=0; i<DCTSIZE; i++)
+  {
+    for (int j=0; j<DCTSIZE; j++)
+    {
+      mat.mat_2D[x+i][j] += res[i*DCTSIZE+j];
+      barrier(CLK_LOCAL_MEM_FENCE);
+    }
+  }
+  
+  *(global short8*)&resDCT[(get_group_id(0)*LOCAL_WINDOW_SIZE+x)*stride+cols-DCTSIZE+offset] += convert_short8_sat_rte(mat.mat8[x]);
+  barrier(CLK_LOCAL_MEM_FENCE);
+  *(global short8*)&resDCT[(get_group_id(0)*LOCAL_WINDOW_SIZE+DCTSIZE+x)*stride+cols-DCTSIZE+offset] +=  convert_short8_sat_rte(mat.mat8[DCTSIZE+x]);
+}
+
+kernel void dctDownEdge1(const uchar global *rawImg, const uint rows, const uint cols, short global *resDCT,  constant const float  *scaleMatQuant, const uint offset, const uint stride)
+{
+  local union{
+    float mat_1D[DCTSIZE*LOCAL_WINDOW_SIZE];
+    float mat_2D[DCTSIZE][LOCAL_WINDOW_SIZE];
+    float8 mat8[DCTSIZE][LOCAL_WINDOW_SIZE/DCTSIZE];
+  } mat;
+  int x = get_local_id(0);
+  
+  mat.mat8[x][0] = convert_float8(*(global uchar8*)&rawImg[(rows-DCTSIZE+x)*stride+(get_group_id(0)*LOCAL_WINDOW_SIZE)+offset]);
+  barrier(CLK_LOCAL_MEM_FENCE);
+  mat.mat8[x][1] = convert_float8(*(global uchar8*)&rawImg[(rows-DCTSIZE+x)*stride+(get_group_id(0)*LOCAL_WINDOW_SIZE+DCTSIZE+offset)]);
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  float res[DCTSIZE2];
+  strideFloatDCT(&mat.mat_1D[x], DCTSIZE, res, scaleMatQuant);
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  mat.mat8[x][0] = 0.0f;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  mat.mat8[x][1] = 0.0f;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  for (int i=0; i<DCTSIZE; i++)
+  {
+    for (int j=0; j<DCTSIZE; j++)
+    {
+      mat.mat_2D[i][x+j] += res[i*DCTSIZE+j];
+      barrier(CLK_LOCAL_MEM_FENCE);
+    }
+  }
+  
+  *(global short8*)&resDCT[(rows-DCTSIZE+x)*stride+(get_group_id(0)*LOCAL_WINDOW_SIZE+offset)] += convert_short8_sat_rte(mat.mat8[x][0]);
+  barrier(CLK_LOCAL_MEM_FENCE);
+  *(global short8*)&resDCT[(rows-DCTSIZE+x)*stride+(get_group_id(0)*LOCAL_WINDOW_SIZE+DCTSIZE+offset)] +=  convert_short8_sat_rte(mat.mat8[x][1]);
+}
+
+kernel void dctDownEdge(const uchar global *rawImg, const uint rows, const uint cols, short global *resDCT,  constant const float  *scaleMatQuant, const uint offset, const uint stride)
+{
+  local union{
+    float mat_1D[DCTSIZE*LOCAL_WINDOW_SIZE];
+    float mat_2D[DCTSIZE][LOCAL_WINDOW_SIZE];
+    float16 mat16[DCTSIZE];
+  } mat;
+  int x = get_local_id(0);
+  
+  mat.mat16[x] = convert_float16(*(global uchar16*)&rawImg[(rows-DCTSIZE+x)*stride+(get_group_id(0)*LOCAL_WINDOW_SIZE)+offset]);
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  float res[DCTSIZE2];
+  strideFloatDCT(&mat.mat_1D[x], LOCAL_WINDOW_SIZE, res, scaleMatQuant);
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  mat.mat16[x] = 0.0f;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  for (int i=0; i<DCTSIZE; i++)
+  {
+    for (int j=0; j<DCTSIZE; j++)
+    {
+      mat.mat_2D[i][x+j] += res[i*DCTSIZE+j];
+      barrier(CLK_LOCAL_MEM_FENCE);
+    }
+  }
+  
+  *(global short16*)&resDCT[(rows-DCTSIZE+x)*stride+(get_group_id(0)*LOCAL_WINDOW_SIZE+offset)] += convert_short16_sat_rte(mat.mat16[x]);
+}
+
+kernel void dctCorner(const uchar global *rawImg, const uint rows, const uint cols, short global *resDCT,  constant const float  *scaleMatQuant, const uint stride)
+{
+  local union{
+    float mat_1D[DCTSIZE2];
+    float mat_2D[DCTSIZE][DCTSIZE];
+    float8 mat8[DCTSIZE];
+  } mat;
+  int x = get_local_id(0);
+  
+  mat.mat8[x] = convert_float8(*(global uchar8*)&rawImg[(rows-DCTSIZE+x)*stride+cols-DCTSIZE]);
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  float res[DCTSIZE2];
+  if (x == 0)
+  {
+    strideFloatDCT(mat.mat_1D, DCTSIZE, res, scaleMatQuant);
+  }
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  mat.mat8[x] = 0.0f;
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
+  if (x == 0) {
+    for (int i = 0; i<DCTSIZE2; i++){
+      mat.mat_1D[i] = res[i];
+    }
+  }
+  
+  *(global short8*)&resDCT[(rows-DCTSIZE+x)*stride+cols-DCTSIZE] += convert_short8_sat_rte(mat.mat8[x]);
+}
 
 
 kernel void justFloatDCT(const uchar global *rawImg, const uint rows, const uint cols, short global *resDCT, float constant *scaleMatQuant, float constant *dctTable, const uint offset, const uint stride)

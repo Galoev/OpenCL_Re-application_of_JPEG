@@ -10,7 +10,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Laba1openCL/Image.cpp"
-            timestampString = "567714098.577785"
+            timestampString = "568057688.09964"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "99"
@@ -26,11 +26,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Laba1openCL/main.cpp"
-            timestampString = "567714098.578301"
+            timestampString = "569423716.483456"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "248"
-            endingLineNumber = "248"
+            startingLineNumber = "265"
+            endingLineNumber = "265"
             landmarkName = "super_mega_opencl()"
             landmarkType = "9">
          </BreakpointContent>
