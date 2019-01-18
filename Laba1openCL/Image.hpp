@@ -24,7 +24,12 @@ public:
   unsigned char* getYRawImg();
   unsigned char* getCbRawImg();
   unsigned char* getCrRawImg();
+  void setYRawImg(unsigned char* Yimg);
+  void setCbRawImg(unsigned char* Cbimg);
+  void setCrRawImg(unsigned char* Crimg);
   unsigned int getElemQuantTbl(const unsigned int num);
+  unsigned int getElemQuantTblTwo(const unsigned int num);
+  unsigned int getElemQuantTblThree(const unsigned int num);
   void getQuantMat(const char *filename, float *quant);
 private:
   jpeg_decompress_struct cinfo;
@@ -33,4 +38,6 @@ private:
   JSAMPROW rawImgCb;
   JSAMPROW rawImgCr;
   int mySize = 0;
+  int originalRows = 0;
+  int originalCols = 0;
 };

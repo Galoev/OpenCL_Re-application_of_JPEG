@@ -158,6 +158,17 @@ int Image::readColorImage(const char *filename)
    * See libjpeg.txt for more info.
    */
   
+  originalCols = cinfo.image_width;
+  originalRows = cinfo.image_height;
+  
+  if (cinfo.image_width % 8 != 0) {
+    cinfo.image_width += (8 - cinfo.image_width % 8);
+  }
+  
+  if (cinfo.image_height % 8 != 0) {
+    cinfo.image_height += (8 - cinfo.image_height % 8);
+  }
+  
   /* Step 4: set parameters for decompression */
   
   /* In this example, we don't need to change any of the defaults set by
@@ -284,8 +295,10 @@ void Image::writeJPEGimage(const char *filename)
   /* First we supply a description of the input image.
    * Four fields of the cinfo struct must be filled in:
    */
-  comp_cinfo.image_width = getCols();   /* image width and height, in pixels */
-  comp_cinfo.image_height = getRows();
+  comp_cinfo.image_width = originalCols;   /* image width and height, in pixels */
+  comp_cinfo.image_height = originalRows;
+  comp_cinfo.jpeg_width = originalCols;
+  comp_cinfo.jpeg_height = originalRows;
   comp_cinfo.input_components = 3;    /* # of color components per pixel */
   comp_cinfo.in_color_space = JCS_YCbCr;   /* colorspace of input image */
   /* Now use the library's routine to set default compression parameters.
@@ -373,6 +386,29 @@ unsigned char* Image::getCrRawImg()
 unsigned int Image::getElemQuantTbl(const unsigned int num)
 {
   return cinfo.quant_tbl_ptrs[0]->quantval[num];
+}
+
+unsigned int Image::getElemQuantTblTwo(const unsigned int num)
+{
+  return cinfo.quant_tbl_ptrs[0]->quantval[num];
+}
+
+unsigned int Image::getElemQuantTblThree(const unsigned int num)
+{
+  return cinfo.quant_tbl_ptrs[0]->quantval[num];
+}
+
+void Image::setYRawImg(unsigned char* Yimg)
+{
+  rawImgY = Yimg;
+}
+void Image::setCbRawImg(unsigned char* Cbimg)
+{
+  rawImgCb = Cbimg;
+}
+void Image::setCrRawImg(unsigned char* Crimg)
+{
+  rawImgCr = Crimg;
 }
 
 void Image::writePGMimage(const char *filename, unsigned char *matDCT){
