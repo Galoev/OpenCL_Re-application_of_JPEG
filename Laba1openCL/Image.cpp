@@ -212,7 +212,6 @@ int Image::readColorImage(const char *filename)
     (void) jpeg_read_scanlines(&cinfo, buffer, 1);
     for (size_t i = 0; i < row_stride; i += cinfo.output_components) {
       //rawImgMy[index++] = buffer[0][i];
-      mySize++;
       rawImgY[index] = buffer[0][i];
       rawImgCb[index] = buffer[0][i+1];
       rawImgCr[index++] = buffer[0][i+2];
@@ -339,7 +338,6 @@ void Image::writeJPEGimage(const char *filename)
       tmp[i] = rawImgY[index*tmpWidth+(i/3)];
       tmp[i+1] = rawImgCb[index*tmpWidth+(i/3)];
       tmp[i+2] = rawImgCr[index*tmpWidth+(i/3)];
-      mySize--;
     }
     row_pointer[0] = tmp;
     (void) jpeg_write_scanlines(&comp_cinfo, row_pointer, 1);

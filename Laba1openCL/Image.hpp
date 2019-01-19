@@ -37,7 +37,6 @@ private:
   JSAMPROW rawImgY;
   JSAMPROW rawImgCb;
   JSAMPROW rawImgCr;
-  int mySize = 0;
   int originalRows = 0;
   int originalCols = 0;
 };

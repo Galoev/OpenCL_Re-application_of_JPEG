@@ -7,7 +7,6 @@
 
 using namespace std;
 
-const size_t SIZE_X = 10;
 const int LOCAL_WINDOW_SIZE = 16;
 
 int super_mega_opencl();
@@ -338,7 +337,6 @@ int super_mega_opencl()
   }
   
   //Копирование данных с девайса на хост ----------------------------------------------
-  float c[SIZE_X];
   //clEnqueueReadBuffer(command_queue, buff_resDCT, true, 0, sizeof(cl_short)*rows*cols, matDCT, 0, nullptr, nullptr);
   
   int* mat = createMat();
@@ -540,7 +538,7 @@ int super_mega_opencl_color()
   
   
   Image img;
-  img.readColorImage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/Compressed-10.jpg");
+  img.readColorImage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/wallpapersden.jpg");
   img.writePGMimage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/wallpapersdenY.pgm", img.getYRawImg());
   img.writePGMimage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/wallpapersdenCb.pgm", img.getCbRawImg());
   img.writePGMimage("/Users/ilkin_galoev/Documents/7 semester/Parallel Programing 2/Laba1/Laba1/wallpapersdenCr.pgm", img.getCrRawImg());
@@ -573,11 +571,9 @@ int super_mega_opencl_color()
     return 5;
   }
   
-  short *matDCT = new short[rows*cols];
   unsigned int offset = 0;
   
   clEnqueueWriteBuffer(command_queue, buff_rawYImg, false, 0, sizeof(cl_uchar)*rows*cols, rawYImg, 0, nullptr, nullptr);
-  clEnqueueWriteBuffer(command_queue, buff_resDCT, false, 0, sizeof(cl_short)*rows*cols, matDCT, 0, nullptr, nullptr);
   clEnqueueWriteBuffer(command_queue, buff_scaleMatQuant, false, 0, sizeof(cl_float)*DCTSIZE2*2, scaleMatQuant, 0, nullptr, nullptr);
   
   
@@ -595,7 +591,7 @@ int super_mega_opencl_color()
   
   short tmpZero = 0;
   clEnqueueFillBuffer(command_queue, buff_resDCT, &tmpZero, 1, 0, sizeof(short)*rows*cols, 0, nullptr, nullptr);
-  ; // сколько тредов запускается
+  
   cl_event kernel_event;
   for (int y_offset = 0; y_offset<= DCTSIZE; y_offset += DCTSIZE)
   {
@@ -694,12 +690,7 @@ int super_mega_opencl_color()
   }
   
   //Копирование данных с девайса на хост ----------------------------------------------
-  float c[SIZE_X];
   //clEnqueueReadBuffer(command_queue, buff_resDCT, true, 0, sizeof(cl_short)*rows*cols, matDCT, 0, nullptr, nullptr);
-  
-  int* mat = createMat();
-  cl_mem buff_mat = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_int)*DCTSIZE2, nullptr, nullptr);
-  clEnqueueWriteBuffer(command_queue, buff_mat, false, 0, sizeof(cl_int)*DCTSIZE2, mat, 0, nullptr, nullptr);
   
   
   //cl_mem buff_resImg = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_uchar)*rows*cols, nullptr, nullptr);
@@ -744,7 +735,7 @@ int super_mega_opencl_color()
   
   cl_mem buff_rawCbImg = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uchar)*rows*cols, nullptr, nullptr);
   
-  if (!buff_rawCbImg || !buff_resDCT || !buff_scaleMatQuant ) {
+  if (!buff_rawCbImg) {
     printf("Alloc mem error\n");
     return 5;
   }
@@ -753,8 +744,8 @@ int super_mega_opencl_color()
   offset = 0;
   
   clEnqueueWriteBuffer(command_queue, buff_rawCbImg, false, 0, sizeof(cl_uchar)*rows*cols, rawCbImg, 0, nullptr, nullptr);
-  clEnqueueWriteBuffer(command_queue, buff_resDCT, false, 0, sizeof(cl_short)*rows*cols, matDCT, 0, nullptr, nullptr);
   clEnqueueWriteBuffer(command_queue, buff_scaleMatQuant, false, 0, sizeof(cl_float)*DCTSIZE2*2, scaleMatQuant, 0, nullptr, nullptr);
+  clEnqueueFillBuffer(command_queue, buff_resDCT, &tmpZero, 1, 0, sizeof(short)*rows*cols, 0, nullptr, nullptr);
   
   
   
@@ -769,7 +760,7 @@ int super_mega_opencl_color()
   clSetKernelArg(dctKernel, 6, sizeof(cl_uint), &cols);
   
   
-  clEnqueueFillBuffer(command_queue, buff_resDCT, &tmpZero, 1, 0, sizeof(short)*rows*cols, 0, nullptr, nullptr);
+  
 
   
   for (int y_offset = 0; y_offset<= DCTSIZE; y_offset += DCTSIZE)
@@ -917,7 +908,6 @@ int super_mega_opencl_color()
   offset = 0;
   
   clEnqueueWriteBuffer(command_queue, buff_rawCrImg, false, 0, sizeof(cl_uchar)*rows*cols, rawCrImg, 0, nullptr, nullptr);
-  clEnqueueWriteBuffer(command_queue, buff_resDCT, false, 0, sizeof(cl_short)*rows*cols, matDCT, 0, nullptr, nullptr);
   clEnqueueWriteBuffer(command_queue, buff_scaleMatQuant, false, 0, sizeof(cl_float)*DCTSIZE2*2, scaleMatQuant, 0, nullptr, nullptr);
   
   
@@ -1062,6 +1052,5 @@ int super_mega_opencl_color()
    clReleaseMemObject(buff_b);
    clReleaseMemObject(buff_c);
    */
-  delete[] matDCT;
   return 0;
 }
